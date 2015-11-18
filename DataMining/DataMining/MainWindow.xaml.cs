@@ -20,9 +20,18 @@ namespace DataMining
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public   MainWindow()
         {
             InitializeComponent();
+            this.Compute();
+        }
+        public async void Compute()
+        {
+            int count =  await DBConn.GetCustomerCount();
+            count = count + 1;
+           
         }
     }
+
+    
 }
