@@ -99,7 +99,7 @@ namespace DM_PROJECT
                                     break;
                                 }
                             }
-                            if (supportCounter > 30)
+                            if (supportCounter > 1)
                             {
                                 List<int> tmpList = new List<int>();
                                 tmpList.Add(i);
@@ -115,8 +115,6 @@ namespace DM_PROJECT
                         for (int j = i+1; j < itemSets[0].Count; j++)
                         {
                             int[] twoItems = new int[2];
-                            twoItems[0] = i;
-                            twoItems[1] = j;
                             int supportCounter = 0;
                             //support Counter wzrasta gdy item pojawił się chociaż w jednej transakcji klienta
                             for (int k = 0; k < numOfCustomers; k++)
@@ -125,6 +123,8 @@ namespace DM_PROJECT
                                 //sprawdzam każdy order. Jeżeli już w którymś obrocie dałem supportCounter ++ to chcę przerwać pętlę
                                 for (int l = 0; l < list[k].Count; l++)
                                 {
+                                    twoItems[0] = i;
+                                    twoItems[1] = j;
                                     //sprawdzam każdy item
                                     foreach (int item in list[k][l])
                                     {
@@ -148,7 +148,7 @@ namespace DM_PROJECT
                                         break;
                                     }
                                 }
-                                if (supportCounter > 30)
+                                if (supportCounter >= 1)
                                 {
                                     List<int> tmpList = new List<int>();
                                     tmpList.Add(i);
@@ -160,7 +160,123 @@ namespace DM_PROJECT
                         }
                     }
 
+                    for (int i = 2; i < itemSets.Count; i++)
+                    {
+                        //liczę dla każdego itemsetu o długości 2
+                        for (int j = 0; j < itemSets[i-1].Count; j++)
+                        {
+                            
+                            //sprawdzam po kolei każdy element k-1 setu czy zaczyna się sekwencją powyżej dopóki któryś element jej nie posiada.
+                            for (int m = j + 1; m < itemSets[i - 1].Count; m++)
+                            {
+                                List<int> firstElementsOfItemSet = new List<int>();
+                                for (int k = 0; k < i - 1; k++)
+                                {
+                                    firstElementsOfItemSet.Add(itemSets[i - 1][j][k]);
+                                }
+                                bool endOfChecking = false;
+                                //for each element in beginning sequence:
+                                for (int n = 0; n < i - 1; n++)
+                                {
+                                    if (itemSets[i - 1][m][n] == firstElementsOfItemSet[n])
+                                    {
+                                        endOfChecking = true;
+                                        break;
+                                    }
+                                }
+                                //nie chcę dalej sprawdzać danego item setu jeżeli natrafiłem na item set bez tej samej poczatkowej sekwencji
+                                if (endOfChecking)
+                                {
+                                    break;
+                                }
+                                //dodam końcowe elementy obu setów do listy która trzymała mi początkąwą sekwencję
+                                firstElementsOfItemSet.Add(itemSets[i - 1][j][i - 1]);
+                                firstElementsOfItemSet.Add(itemSets[i - 1][m][i - 1]);
+                                for (int s1 = 0; s1 < 3; s1++)
+                                {
+                                    if (firstElementsOfItemSet[s1] == 28)
+                                    {
+                                        for (int s2 = 0; s2 < 3; s2++)
+                                        {
+                                            if (firstElementsOfItemSet[s2] == 39)
+                                            {
+                                                for (int s3 = 0; s3 < 3; s3++)
+                                                {
+                                                    if (firstElementsOfItemSet[s3] == 46)
+                                                    {
+                                                        s3++;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                ////////////////////////////////////////////////////////
+                                ////             itemset checking                   ////
+                                ////////////////////////////////////////////////////////
+                              /*  if (firstElementsOfItemSet.find == 11 && firstElementsOfItemSet[1] == 42 && firstElementsOfItemSet[2] == 72)
+                                {
+                                    break;
+                                }*/
+                                int supportCounter = 0;
+                                //support Counter wzrasta gdy item pojawił się chociaż w jednej transakcji klienta
+                                for (int o = 0; o < numOfCustomers; o++)
+                                {
+                                    List<int> tmpItemList = new List<int>(firstElementsOfItemSet);
+                                    bool isStop = true ;
+                                    //sprawdzam każdy order. Jeżeli już w którymś obrocie dałem supportCounter ++ to chcę przerwać pętlę
+                                    for (int p = 0; p < list[o].Count; p++)
+                                    {
+                                        //sprawdzam każdy item
+                                        foreach (int item in list[o][p])
+                                        {
+                                            for (int r = 0; r < tmpItemList.Count; r++)
+                                            {
+                                                if (tmpItemList[r] == item)
+                                                {
+                                                    tmpItemList[r] = -1;
+                                                }
+                                            }
 
+                                            for (int r = 0; r < tmpItemList.Count; r++)
+                                            {
+                                                if (tmpItemList[r] != -1)
+                                                {
+                                                    isStop = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (isStop)
+                                            {
+                                                supportCounter++;
+                                                break;
+                                            }
+    
+                                        }
+                                        if (isStop)
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    if (supportCounter >= 1)
+                                    {
+                                        List<int> tmpList = new List<int>();
+                                        for (int r = 0; r < firstElementsOfItemSet.Count; r++)
+                                        {
+                                            tmpList.Add(firstElementsOfItemSet[r]);
+                                        }
+                                        itemSets[i].Add(tmpList);
+                                        break;
+                                    }
+                                }
+
+
+                                ////////////////////////////////////////////////////////
+                                ////////////////////////////////////////////////////////
+
+                            }
+                        }
+                    }
 
                         return itemSets;
                 });
