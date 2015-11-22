@@ -24,7 +24,7 @@ namespace DM_DAT
         public List<List<List<int>>> frequentItemListsOfDifferentLength;
         public List<List<int>> frequentItemsetList;
         public List<List<List<int>>> largeSequences;
-        public double supportPercentage = 0.8;
+        public double supportPercentage = 0.6;
         public int numberOfCustomersSupport;
         public MainWindow()
         {
@@ -62,7 +62,7 @@ namespace DM_DAT
 
             // Read the file and display it line by line.
             System.IO.StreamReader file =
-               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\mushroom.dat");
+               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\connectShort.dat");
             while ((line = file.ReadLine()) != null)
             {
                 List<List<int>> customerTransactions = new List<List<int>>();
