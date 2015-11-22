@@ -22,15 +22,38 @@ namespace DM_DAT
     {
         public List<List<List<int>>> customersSequences;
         public List<List<List<int>>> frequentItemListsOfDifferentLength;
-        public double supportPercentage = 0.7;
+        public List<List<int>> frequentItemsetList;
+        public List<List<List<int>>> largeSequences;
+        public double supportPercentage = 0.8;
         public int numberOfCustomersSupport;
         public MainWindow()
         {
             customersSequences = new List<List<List<int>>>();
             frequentItemListsOfDifferentLength = new List<List<List<int>>>();
+            frequentItemsetList = new List<List<int>>();
+            largeSequences = new List<List<List<int>>>();
             InitializeComponent();
             ReadData();
             GenerateFrequentItemsets();
+            
+            Transform();
+
+            largeSequences.Add(new List<List<int>>());
+            for (int i = 0; i < frequentItemsetList.Count; i++)
+            {
+                List<int> lengthOneSequence = new List<int>();
+                lengthOneSequence.Add(i);
+                largeSequences[0].Add(lengthOneSequence);
+            }
+
+                
+
+            GenerateFrequentSequences();
+
+            int a = 0;
+            a++;
+
+
         }
 
         public void ReadData(){
@@ -39,7 +62,7 @@ namespace DM_DAT
 
             // Read the file and display it line by line.
             System.IO.StreamReader file =
-               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\pumsb_star.dat");
+               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\mushroom.dat");
             while ((line = file.ReadLine()) != null)
             {
                 List<List<int>> customerTransactions = new List<List<int>>();
@@ -72,8 +95,6 @@ namespace DM_DAT
                 AddCandidatesToFrequentList(candidates, kSeq);
                 kSeq++;
             } while (frequentItemListsOfDifferentLength[kSeq - 2].Count > 0);
-            int a = 0;
-            a++;
         }
 
         //We may speed up here if it will be necessary
@@ -276,6 +297,233 @@ namespace DM_DAT
             }
         }
 
-        //public void Generate
+        public void Transform()
+        {
+            MakeSingleItemList();
+
+            for (int i = 0; i < customersSequences.Count; i++)
+            {
+                for (int j = 0; j < customersSequences[i].Count; j++)
+                {
+                    List<int> tmpTransaction = new List<int>(customersSequences[i][j]);
+                    customersSequences[i][j].Clear();
+                    for (int l = 0; l < frequentItemsetList.Count; l++)
+                    {
+                        int litemsetLength = frequentItemsetList[l].Count;
+                        if (litemsetLength <= tmpTransaction.Count)
+                        {
+                            int litemsetCounter = 0;
+                            foreach (int item in tmpTransaction)
+                            {
+                                if (item == frequentItemsetList[l][litemsetCounter])
+                                {
+                                    litemsetCounter++;
+                                }
+                                if (litemsetCounter == frequentItemsetList[l].Count)
+                                {
+                                    break;
+                                }
+                            }
+                            if (litemsetCounter == frequentItemsetList[l].Count)
+                            {
+                                customersSequences[i][j].Add(l);
+                            }
+                        }
+                    }
+                    if (customersSequences[i][j].Count == 0)
+                    {
+                        customersSequences[i].Remove(customersSequences[i][j]);
+                    }
+                }
+                if (customersSequences[i].Count == 0)
+                {
+                    customersSequences.Remove(customersSequences[i]);
+                }
+            }
+            
+        }
+
+        public void MakeSingleItemList()
+        {
+            for (int i = 0; i < frequentItemListsOfDifferentLength.Count; i++)
+            {
+                for (int j = 0; j < frequentItemListsOfDifferentLength[i].Count; j++)
+                {
+                    frequentItemsetList.Add(frequentItemListsOfDifferentLength[i][j]);
+                }
+            }
+        }
+
+        /******************************************************************/
+        /********** GENERATING SEQUENCES **********************************/
+        /******************************************************************/
+
+        public void GenerateFrequentSequences()
+        {
+            int kSeq = 2;
+            do
+            {
+                List<List<int>> candidates = SeqCandidateGenerator(kSeq);
+
+                AddSequenceCandidatesToFrequentList(candidates, kSeq);
+               // AddCandidatesToFrequentList(candidates, kSeq);
+                kSeq++;
+            } while (largeSequences[kSeq - 2].Count > 0);
+        }
+
+        private List<List<int>> SeqCandidateGenerator(int k)
+        {
+            int numOfLargeSeq = largeSequences[k - 2].Count;
+            List<List<int>> candidatesK = new List<List<int>>();
+            //index is k-2 because we're starting from 0
+            for (int i = 0; i < numOfLargeSeq; i++)
+            {
+                for (int j = 0; j < numOfLargeSeq; j++)
+                {
+                    List<int> candidate = new List<int>();
+
+                    //let's check first k-2 items
+                    int l;
+                    for (l = 0; l < k - 2; l++)
+                    {
+                        if (largeSequences[k - 2][i][l] == largeSequences[k - 2][j][l])
+                        {
+                            candidate.Add(largeSequences[k - 2][i][l]);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    if (l >= k - 2)
+                    {
+                        candidate.Add(largeSequences[k - 2][i][k - 2]);
+                        candidate.Add(largeSequences[k - 2][j][k - 2]);
+                        candidatesK.Add(candidate);
+                    }
+                }
+            }
+
+            CutSequenceCandidates(candidatesK, k);
+
+            return candidatesK;
+        }
+
+        private void CutSequenceCandidates(List<List<int>> candidatesK, int k)
+        {
+            foreach (List<int> itemset in candidatesK.ToList())
+            {
+                List<int[]> subsets = new List<int[]>();
+                int[] subset = new int[k - 1];
+
+                //I add manualy one subset which is k-1 last items
+                for (int i = 0; i < k - 1; i++)
+                {
+                    subset[i] = itemset[i + 1];
+                }
+                subsets.Add(subset);
+
+                //here I add the rest of possible subsets
+                for (int i = 1; i < k; i++)
+                {
+                    int index = 1;
+                    subset = new int[k - 1];
+                    subset[0] = itemset[0];
+                    for (int j = 1; j < k; j++)
+                    {
+                        if (j != i)
+                        {
+                            subset[index] = itemset[j];
+                            index++;
+                        }
+                    }
+                    subsets.Add(subset);
+                }
+
+                //I've got all subsets. Now I'll check whether they are in the k-1 frequent
+                //list
+                bool areAllSubsetsFrequent = true;
+                foreach (int[] ss in subsets)
+                {
+                    bool isFrequentSubset = false;
+                    foreach (List<int> fs in largeSequences[k - 2])
+                    {
+                        int i;
+                        for (i = 0; i < k - 1; i++)
+                        {
+                            if (fs[i] != ss[i])
+                            {
+                                break;
+                            }
+                        }
+                        //if we didn't break the loop than value of i should equal to k-1
+                        //which means that checked set was the same as some from frequent itemset
+                        if (i == k - 1)
+                        {
+                            isFrequentSubset = true;
+                            break;
+                        }
+                    }
+                    if (isFrequentSubset == false)
+                    {
+                        areAllSubsetsFrequent = false;
+                        break;
+                    }
+                }
+                if (areAllSubsetsFrequent == false)
+                {
+                    candidatesK.Remove(itemset);
+                }
+            }
+        }
+
+        public void AddSequenceCandidatesToFrequentList(List<List<int>> candidates, int k)
+        {
+             largeSequences.Add(new List<List<int>>());
+             int counter = 0;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                counter = 0;
+                bool stopCheckingCustomer = false;
+                foreach (List<List<int>> customerSeq in customersSequences)
+                {
+                    if (stopCheckingCustomer == false)
+                    {
+                        int itemCounter = 0;
+                        foreach (List<int> setOfItemSets in customerSeq)
+                        {
+                            foreach (int itemSet in setOfItemSets)
+                            {
+                                if (itemSet == candidates[i][itemCounter])
+                                {
+                                    itemCounter++;
+                                    break;
+                                }
+                            }
+                            if (itemCounter == k)
+                            {
+                               // stopCheckingCustomer = true;
+                                counter++;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                if (counter >= numberOfCustomersSupport)
+                {
+                    List<int> tmp = new List<int>();
+                    for (int s = 0; s < k; s++)
+                    {
+                        tmp.Add(candidates[i][s]);
+                    }
+                    largeSequences[k - 1].Add(tmp);
+                }
+            }
+        }
+
     }
 }
