@@ -22,7 +22,7 @@ namespace DM_DAT
     {
         public List<List<List<int>>> customersSequences;
         public List<List<List<int>>> frequentItemListsOfDifferentLength;
-        public double supportPercentage = 0.5;
+        public double supportPercentage = 0.7;
         public int numberOfCustomersSupport;
         public MainWindow()
         {
@@ -39,7 +39,7 @@ namespace DM_DAT
 
             // Read the file and display it line by line.
             System.IO.StreamReader file =
-               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\pumsb.dat");
+               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\pumsb_star.dat");
             while ((line = file.ReadLine()) != null)
             {
                 List<List<int>> customerTransactions = new List<List<int>>();
@@ -65,8 +65,73 @@ namespace DM_DAT
         public void GenerateFrequentItemsets()
         {
             GenereteOneItemFrequentItemSets();
+            int kSeq = 2;
+            do
+            {
+                List<List<int>> candidates = Apriori_gen(kSeq);
+                AddCandidatesToFrequentList(candidates, kSeq);
+                kSeq++;
+            } while (frequentItemListsOfDifferentLength[kSeq - 2].Count > 0);
             int a = 0;
             a++;
+        }
+
+        //We may speed up here if it will be necessary
+        // ---if checked sequence is longer than some item set we are not checking it
+        // -----if number of items left is smaller than the number of letters we need - break
+        public void AddCandidatesToFrequentList(List<List<int>> candidates, int k)
+        {
+            frequentItemListsOfDifferentLength.Add(new List<List<int>>());
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                int counter = 0;
+                foreach (List<List<int>> customerSeq in customersSequences)
+                {
+                    bool stopCheckingCutomer = false;
+                    if (stopCheckingCutomer == false)
+                    {
+                        foreach (List<int> itemSet in customerSeq)
+                        {
+                                int itemCounter = 0;
+                                if (itemSet.Count >= k)
+                                {
+                                    for (int j = 0; j < itemSet.Count;j++)
+                                    //    foreach (int item in itemSet)
+                                        {
+                                            if (itemCounter == k)
+                                            {
+                                                break;
+                                            }
+                                            if (itemSet[j] == candidates[i][itemCounter])
+                                            {
+                                                itemCounter++;
+                                            }
+                                            //if number of items left is smaller than the number of letters we need - break
+                                            if (itemSet.Count - j < k - itemCounter)
+                                            {
+                                                break;
+                                            }
+                                        }
+                                    if (itemCounter == k)
+                                    {
+                                        counter++;
+                                        stopCheckingCutomer = true;
+                                        break;
+                                    }
+                                }
+                        }
+                    }
+                }
+                if (counter >= numberOfCustomersSupport)
+                {
+                    List<int> tmp = new List<int>();
+                    for (int s = 0; s < k; s++)
+                    {
+                        tmp.Add(candidates[i][s]);
+                    }
+                    frequentItemListsOfDifferentLength[k-1].Add(tmp);
+                }
+            }
         }
 
         public void GenereteOneItemFrequentItemSets()
@@ -145,7 +210,7 @@ namespace DM_DAT
         //function which reduce number of candidates by those which contain subset of items
         //which do not belong to frequent itemset k-1
         public void CutCandidates(List<List<int>> candidatesK, int k){
-            foreach (List<int> itemset in candidatesK)
+            foreach (List<int> itemset in candidatesK.ToList())
             {
                 List<int[]> subsets = new List<int[]>();
                 int[] subset = new int[k - 1];
