@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,65 +26,87 @@ namespace DM_DAT
         public List<List<List<int>>> frequentItemListsOfDifferentLength;
         public List<List<int>> frequentItemsetList;
         public List<List<List<int>>> largeSequences;
-        public double supportPercentage = 0.5;
+        public double supportPercentage = 0.9;
         public int numberOfCustomersSupport;
+        public string saveFilePath = "";
+        int numberOfCells;
         public MainWindow()
         {
-            customersSequences = new List<List<List<int>>>();
-            frequentItemListsOfDifferentLength = new List<List<List<int>>>();
-            frequentItemsetList = new List<List<int>>();
-            largeSequences = new List<List<List<int>>>();
             InitializeComponent();
-            ReadData();
-            GenerateFrequentItemsets();
-            
-            Transform();
-
-            largeSequences.Add(new List<List<int>>());
-            for (int i = 0; i < frequentItemsetList.Count; i++)
-            {
-                List<int> lengthOneSequence = new List<int>();
-                lengthOneSequence.Add(i);
-                largeSequences[0].Add(lengthOneSequence);
-            }
-
-                
-
-            GenerateFrequentSequences();
-
-            int a = 0;
-            a++;
-
-
         }
 
-        public void ReadData(){
+        public bool ReadData(){
             int counter = 0;
             string line;
 
             // Read the file and display it line by line.
-            System.IO.StreamReader file =
-               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\test.dat");
-            while ((line = file.ReadLine()) != null)
+
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog()
             {
-                List<List<int>> customerTransactions = new List<List<int>>();
-            //    Console.WriteLine(line);
-                string[] customerTransactionsTMP = line.Split(' ');
-                foreach (string trans in customerTransactionsTMP)
+                Filter = "DAT Files(*.dat)|*.dat"
+            };
+            dlg.Title = "Open file with sequences";
+
+            Nullable<bool> result = dlg.ShowDialog();
+
+            if (result == true)
+            {
+                System.IO.StreamReader file =
+               new System.IO.StreamReader(dlg.FileName);
+                while ((line = file.ReadLine()) != null)
                 {
-                    List<int> itemsSequence = new List<int>();
-                    foreach (char a in trans)
+                    List<List<int>> customerTransactions = new List<List<int>>();
+                    //    Console.WriteLine(line);
+                    string[] customerTransactionsTMP = line.Split(' ');
+                    foreach (string trans in customerTransactionsTMP)
                     {
-                        itemsSequence.Add(int.Parse(a.ToString()));
+                        List<int> itemsSequence = new List<int>();
+                        foreach (char a in trans)
+                        {
+                            itemsSequence.Add(int.Parse(a.ToString()));
+                            numberOfCells++;
+                        }
+                        customerTransactions.Add(itemsSequence);
                     }
-                    customerTransactions.Add(itemsSequence);
+                    customersSequences.Add(customerTransactions);
+                    counter++;
                 }
-                customersSequences.Add(customerTransactions);
-                counter++;
+                numberOfCustomersSupport = (int)((double)counter * supportPercentage);
+                Console.WriteLine("Number of customers: " + counter);
+                file.Close();
+                MessageBox.Show("Word Set Loaded!");
+                
+                //////////////
+
+                Microsoft.Win32.SaveFileDialog saveDlg = new Microsoft.Win32.SaveFileDialog()
+                {
+                    Filter = "Text Files(*.txt)|*.txt"
+                };
+
+                Nullable<bool> saveResult = saveDlg.ShowDialog();
+
+                if (result == true)
+                {
+                    saveFilePath = saveDlg.FileName;
+                    
+                    MessageBox.Show("Found sequences will be written to a given file");
+
+                    return true;
+
+                }
+                else
+                {
+                    MessageBox.Show("You need to select/create file to which results will be written!");
+                    return false;
+                }
+                /////////////////
             }
-            numberOfCustomersSupport = (int)((double)counter * supportPercentage);
-            Console.WriteLine("Number of customers: " + counter);
-            file.Close();
+            else
+            {
+                MessageBox.Show("Loading Aborted!");
+                return false;
+            }
+            
         }
 
         public void GenerateFrequentItemsets()
@@ -500,7 +524,7 @@ namespace DM_DAT
                                     break;
                                 }
                             }
-                            if (itemCounter == k)
+                            if (itemCounter == k || itemCounter==candidates.Count)
                             {
                                // stopCheckingCustomer = true;
                                 counter++;
@@ -523,6 +547,66 @@ namespace DM_DAT
                     largeSequences[k - 1].Add(tmp);
                 }
             }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            customersSequences = new List<List<List<int>>>();
+            frequentItemListsOfDifferentLength = new List<List<List<int>>>();
+            frequentItemsetList = new List<List<int>>();
+            largeSequences = new List<List<List<int>>>();
+            numberOfCells = 0;
+            if (ReadData())
+            {
+
+                var watch = Stopwatch.StartNew();
+                GenerateFrequentItemsets();
+
+                Transform();
+
+                largeSequences.Add(new List<List<int>>());
+                for (int i = 0; i < frequentItemsetList.Count; i++)
+                {
+                    List<int> lengthOneSequence = new List<int>();
+                    lengthOneSequence.Add(i);
+                    largeSequences[0].Add(lengthOneSequence);
+                }
+
+                GenerateFrequentSequences();
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
+
+                SaveToFile((int)elapsedMs);
+            }
+        }
+
+        private void SaveToFile(int ms)
+        {
+
+
+            using (StreamWriter sw = new StreamWriter(saveFilePath))
+            {
+                sw.WriteLine("Time needed to compute solution: " + ms + " ms");
+
+                sw.WriteLine("Solution computed for " + numberOfCells + " number of cells");
+                for (int i = 0; i < largeSequences.Count; i++)
+                { 
+                    for (int j = 0; j < largeSequences[i].Count; j++)
+                    {
+                        string tmpString = "";
+                        for (int k = 0; k < largeSequences[i][j].Count; k++)
+                        {
+                            foreach (int item in frequentItemsetList[largeSequences[i][j][k]])
+                            {
+                                tmpString = tmpString + item;
+                            }
+                            tmpString = tmpString + " ";
+                        }
+                        sw.WriteLine(tmpString);
+                    }
+                }
+            }
+            MessageBox.Show("Words Created and file saved!");
         }
 
     }

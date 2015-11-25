@@ -28,20 +28,21 @@ namespace ShortenCustomerSequence
         }
         public void ShortenData()
         {
-            int numberOfitemsets = 8;
+            int numberOfitemsets = 15;
             string line;
             List<string> lines = new List<string>();
             // Read the file and display it line by line.
             System.IO.StreamReader file =
-               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\connect.dat");
-            while ((line = file.ReadLine()) != null)
+               new System.IO.StreamReader("C:\\Users\\lukas\\Desktop\\Data mining\\pumsb.dat");
+            Random rnd = new Random();
+            int customerCounter = 0;
+            while ((line = file.ReadLine()) != null && customerCounter<20000)
             {
                 string[] numbers = line.Split(' ');
-                int[] randomNumbers = new int[8];
-                string[] randomItemsets = new string[8];
-                for (int j = 0; j < 8; j++) { randomNumbers[j] = -1; }
+                int[] randomNumbers = new int[numberOfitemsets];
+                string[] randomItemsets = new string[numberOfitemsets];
+                for (int j = 0; j < numberOfitemsets; j++) { randomNumbers[j] = -1; }
                 int counter = 0;
-                Random rnd = new Random();
                 while (counter < numberOfitemsets)
                 {
                     int random = rnd.Next(0, numbers.Count());
@@ -80,8 +81,9 @@ namespace ShortenCustomerSequence
                     customerSeq = customerSeq + s + " ";
                 }
                 lines.Add(customerSeq);
+                customerCounter++;
             }
-            using (StreamWriter outputFile = new StreamWriter("C:\\Users\\lukas\\Desktop\\Data mining\\connectShort.dat"))
+            using (StreamWriter outputFile = new StreamWriter("C:\\Users\\lukas\\Desktop\\Data mining\\pumsbShort.dat"))
             {
                 foreach (string lin in lines)
                     outputFile.WriteLine(lin);
