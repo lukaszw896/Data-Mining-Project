@@ -26,6 +26,7 @@ namespace DM_DAT
         public List<List<List<int>>> frequentItemListsOfDifferentLength;
         public List<List<int>> frequentItemsetList;
         public List<List<List<int>>> largeSequences;
+        public List<int> numberOfSequenceCandidates = new List<int>();
         public double supportPercentage = 0.9;
         public int numberOfCustomersSupport;
         public string saveFilePath = "";
@@ -382,17 +383,22 @@ namespace DM_DAT
         /********** GENERATING SEQUENCES **********************************/
         /******************************************************************/
 
-        public void GenerateFrequentSequences()
+        public Task GenerateFrequentSequences()
         {
-            int kSeq = 2;
-            do
-            {
-                List<List<int>> candidates = SeqCandidateGenerator(kSeq);
-
-                AddSequenceCandidatesToFrequentList(candidates, kSeq);
-               // AddCandidatesToFrequentList(candidates, kSeq);
-                kSeq++;
-            } while (largeSequences[kSeq - 2].Count > 0);
+            return Task.Run(() =>
+              {
+                  int kSeq = 2;
+                  do
+                  {
+                      List<List<int>> candidates = SeqCandidateGenerator(kSeq);
+                      numberOfSequenceCandidates.Add(candidates.Count);
+                      System.Threading.Thread.Sleep(1);
+                      AddSequenceCandidatesToFrequentList(candidates, kSeq);
+                      // AddCandidatesToFrequentList(candidates, kSeq);
+                      kSeq++;
+                  } while (largeSequences[kSeq - 2].Count > 0);
+              }
+            );
         }
 
         private List<List<int>> SeqCandidateGenerator(int k)
@@ -524,7 +530,7 @@ namespace DM_DAT
                                     break;
                                 }
                             }
-                            if (itemCounter == k || itemCounter==candidates.Count)
+                            if (itemCounter == k)  // || itemCounter==candidates.Count
                             {
                                // stopCheckingCustomer = true;
                                 counter++;
@@ -549,35 +555,137 @@ namespace DM_DAT
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private async void Button_Click(object sender, RoutedEventArgs e)
         {
-            customersSequences = new List<List<List<int>>>();
-            frequentItemListsOfDifferentLength = new List<List<List<int>>>();
-            frequentItemsetList = new List<List<int>>();
-            largeSequences = new List<List<List<int>>>();
-            numberOfCells = 0;
-            if (ReadData())
+            if (validateInput())
             {
 
-                var watch = Stopwatch.StartNew();
-                GenerateFrequentItemsets();
-
-                Transform();
-
-                largeSequences.Add(new List<List<int>>());
-                for (int i = 0; i < frequentItemsetList.Count; i++)
+                customersSequences = new List<List<List<int>>>();
+                frequentItemListsOfDifferentLength = new List<List<List<int>>>();
+                frequentItemsetList = new List<List<int>>();
+                largeSequences = new List<List<List<int>>>();
+                numberOfCells = 0;
+                if (ReadData())
                 {
-                    List<int> lengthOneSequence = new List<int>();
-                    lengthOneSequence.Add(i);
-                    largeSequences[0].Add(lengthOneSequence);
+
+                    var watch = Stopwatch.StartNew();
+                    GenerateFrequentItemsets();
+
+                    Transform();
+
+                    largeSequences.Add(new List<List<int>>());
+                    for (int i = 0; i < frequentItemsetList.Count; i++)
+                    {
+                        List<int> lengthOneSequence = new List<int>();
+                        lengthOneSequence.Add(i);
+                        largeSequences[0].Add(lengthOneSequence);
+                    }
+                    numberOfSequenceCandidates.Add(largeSequences[0].Count);
+                    await GenerateFrequentSequences();
+                    FindMaximalSequences();
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+
+                    SaveToFile((int)elapsedMs);
                 }
-
-                GenerateFrequentSequences();
-                watch.Stop();
-                var elapsedMs = watch.ElapsedMilliseconds;
-
-                SaveToFile((int)elapsedMs);
             }
+        }
+
+        private void FindMaximalSequences()
+        {
+            //checking from the longest sequences
+            for (int k = largeSequences.Count - 1; k > -1; k--)
+            {
+                //for each sequnce
+                for (int i = 0; i < largeSequences[k].Count; i++)
+                {   
+                    //go from smallest sequence to sequences shorter than sequence being checked
+                    for (int j = 0; j < k+1; j++)
+                    {
+                        List<int> removeSequence = new List<int>();
+                        //for each from smaller sequences
+                        for (int l = 0; l < largeSequences[j].Count; l++)
+                        {
+                            if (!(k == j && i == l))
+                            {
+                                int itemSetsInSequenceCounter = 0;
+                                bool remove = false;
+                                for (int m = 0; m < largeSequences[k][i].Count; m++)
+                                {
+                                    if (IsItemsetSubsetOfItemset(largeSequences[k][i][m], largeSequences[j][l][itemSetsInSequenceCounter]))
+                                    {
+                                        itemSetsInSequenceCounter++;
+                                        if (itemSetsInSequenceCounter >= largeSequences[j][l].Count)
+                                        {
+                                            remove = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (remove)
+                                {
+                                    removeSequence.Add(l);
+                                }
+                            }
+                        }
+                        //It's just for not messing up with the list indexing...
+                        for (int ek = 0; ek < removeSequence.Count; ek++)
+                        {
+                            for (int ke = 0; ke < removeSequence.Count-1; ke++)
+                            {
+                                if (removeSequence[ke] < removeSequence[ke + 1])
+                                {
+                                    int tmp = removeSequence[ke];
+                                    removeSequence[ke] = removeSequence[ke + 1];
+                                    removeSequence[ke + 1] = tmp;
+                                }
+                            }
+                        }
+                            foreach (int seq in removeSequence)
+                            {
+                                largeSequences[j].RemoveAt(seq);
+                            }
+                    }
+
+                }
+            }
+        }
+
+        bool IsItemsetSubsetOfItemset(int firstItemSet, int secondItemSet)
+        {
+            int counter = 0;
+            int numberOfItemsInSetOne = frequentItemsetList[firstItemSet].Count;
+            int numberOfItemsInSetTwo = frequentItemsetList[secondItemSet].Count;
+            if(numberOfItemsInSetOne<numberOfItemsInSetTwo){
+                return false;
+            }
+            for(int i=0;i<numberOfItemsInSetOne;i++){
+                if(frequentItemsetList[firstItemSet][i] == frequentItemsetList[secondItemSet][counter]){
+                    counter++;
+                    if(counter >=numberOfItemsInSetTwo){
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private bool validateInput()
+        {
+            try{
+                double support = double.Parse(textBox.Text,System.Globalization.CultureInfo.InvariantCulture); 
+                if(support>=0.0 && support<=1.0){
+                    supportPercentage = support;
+                    return true;
+                }
+                else{
+                    MessageBox.Show("Value of support should be from range [0,1]!");
+                }
+            }catch(Exception e){
+                MessageBox.Show("Value for support is incorrect!");
+                return false;
+            }
+            return false;
         }
 
         private void SaveToFile(int ms)
@@ -586,28 +694,44 @@ namespace DM_DAT
 
             using (StreamWriter sw = new StreamWriter(saveFilePath))
             {
+                sw.WriteLine("Solution computed for support value equal to: " + supportPercentage);
+
                 sw.WriteLine("Time needed to compute solution: " + ms + " ms");
 
                 sw.WriteLine("Solution computed for " + numberOfCells + " number of cells");
-                for (int i = 0; i < largeSequences.Count; i++)
-                { 
-                    for (int j = 0; j < largeSequences[i].Count; j++)
-                    {
-                        string tmpString = "";
-                        for (int k = 0; k < largeSequences[i][j].Count; k++)
-                        {
-                            foreach (int item in frequentItemsetList[largeSequences[i][j][k]])
-                            {
-                                tmpString = tmpString + item;
-                            }
-                            tmpString = tmpString + " ";
-                        }
-                        sw.WriteLine(tmpString);
-                    }
+                int numberOffMaximalSequences = 0;
+                for(int i=0;i<largeSequences.Count;i++){
+                    numberOffMaximalSequences += largeSequences[i].Count;
                 }
+
+                sw.WriteLine("NUMBER OF MAXIMAL FREQUENT SEQUENCES FOUND: " + numberOffMaximalSequences);
+
+                sw.WriteLine("Number of large 1 sequences: " + numberOfSequenceCandidates[0]);
+
+                for (int i = 1; i < numberOfSequenceCandidates.Count; i++)
+                {
+                    sw.WriteLine("Number of candidates for large " + (i+1) + " sequences: " + numberOfSequenceCandidates[i]);
+                }
+
+                    for (int i = 0; i < largeSequences.Count; i++)
+                    {
+                        for (int j = 0; j < largeSequences[i].Count; j++)
+                        {
+                            string tmpString = "";
+                            for (int k = 0; k < largeSequences[i][j].Count; k++)
+                            {
+                                foreach (int item in frequentItemsetList[largeSequences[i][j][k]])
+                                {
+                                    tmpString = tmpString + item;
+                                }
+                                tmpString = tmpString + " ";
+                            }
+                            sw.WriteLine(tmpString);
+                        }
+                    }
             }
+            numberOfSequenceCandidates = new List<int>();
             MessageBox.Show("Words Created and file saved!");
         }
-
     }
 }
