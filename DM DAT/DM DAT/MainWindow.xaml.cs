@@ -36,79 +36,13 @@ namespace DM_DAT
             InitializeComponent();
         }
 
-        public bool ReadData(){
-            int counter = 0;
-            string line;
-
-            // Read the file and display it line by line.
-
-            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog()
-            {
-                Filter = "DAT Files(*.dat)|*.dat"
-            };
-            dlg.Title = "Open file with sequences";
-
-            Nullable<bool> result = dlg.ShowDialog();
-
-            if (result == true)
-            {
-                System.IO.StreamReader file =
-               new System.IO.StreamReader(dlg.FileName);
-                while ((line = file.ReadLine()) != null)
-                {
-                    List<List<int>> customerTransactions = new List<List<int>>();
-                    //    Console.WriteLine(line);
-                    string[] customerTransactionsTMP = line.Split(' ');
-                    foreach (string trans in customerTransactionsTMP)
-                    {
-                        List<int> itemsSequence = new List<int>();
-                        foreach (char a in trans)
-                        {
-                            itemsSequence.Add(int.Parse(a.ToString()));
-                            numberOfCells++;
-                        }
-                        customerTransactions.Add(itemsSequence);
-                    }
-                    customersSequences.Add(customerTransactions);
-                    counter++;
-                }
-                numberOfCustomersSupport = (int)((double)counter * supportPercentage);
-                Console.WriteLine("Number of customers: " + counter);
-                file.Close();
-                MessageBox.Show("Word Set Loaded!");
-                
-                //////////////
-
-                Microsoft.Win32.SaveFileDialog saveDlg = new Microsoft.Win32.SaveFileDialog()
-                {
-                    Filter = "Text Files(*.txt)|*.txt"
-                };
-
-                Nullable<bool> saveResult = saveDlg.ShowDialog();
-
-                if (result == true)
-                {
-                    saveFilePath = saveDlg.FileName;
-                    
-                    MessageBox.Show("Found sequences will be written to a given file");
-
-                    return true;
-
-                }
-                else
-                {
-                    MessageBox.Show("You need to select/create file to which results will be written!");
-                    return false;
-                }
-                /////////////////
-            }
-            else
-            {
-                MessageBox.Show("Loading Aborted!");
-                return false;
-            }
-            
-        }
+        /*****************************************************************************************************/
+        /*****************************************************************************************************/
+        /*****                                                                                          ******/
+        /*****                             GENERATION OF FREQUENT ITEMSETS                              ******/
+        /*****                                                                                          ******/
+        /*****************************************************************************************************/
+        /*****************************************************************************************************/
 
         public void GenerateFrequentItemsets()
         {
@@ -379,9 +313,13 @@ namespace DM_DAT
             }
         }
 
-        /******************************************************************/
-        /********** GENERATING SEQUENCES **********************************/
-        /******************************************************************/
+        /*****************************************************************************************************/
+        /*****************************************************************************************************/
+        /*****                                                                                          ******/
+        /*****                             GENERATION OF FREUENT SEQUENCES                              ******/
+        /*****                                                                                          ******/
+        /*****************************************************************************************************/
+        /*****************************************************************************************************/
 
         public Task GenerateFrequentSequences()
         {
@@ -555,42 +493,6 @@ namespace DM_DAT
             }
         }
 
-        private async void Button_Click(object sender, RoutedEventArgs e)
-        {
-            if (validateInput())
-            {
-
-                customersSequences = new List<List<List<int>>>();
-                frequentItemListsOfDifferentLength = new List<List<List<int>>>();
-                frequentItemsetList = new List<List<int>>();
-                largeSequences = new List<List<List<int>>>();
-                numberOfCells = 0;
-                if (ReadData())
-                {
-
-                    var watch = Stopwatch.StartNew();
-                    GenerateFrequentItemsets();
-
-                    Transform();
-
-                    largeSequences.Add(new List<List<int>>());
-                    for (int i = 0; i < frequentItemsetList.Count; i++)
-                    {
-                        List<int> lengthOneSequence = new List<int>();
-                        lengthOneSequence.Add(i);
-                        largeSequences[0].Add(lengthOneSequence);
-                    }
-                    numberOfSequenceCandidates.Add(largeSequences[0].Count);
-                    await GenerateFrequentSequences();
-                    FindMaximalSequences();
-                    watch.Stop();
-                    var elapsedMs = watch.ElapsedMilliseconds;
-
-                    SaveToFile((int)elapsedMs);
-                }
-            }
-        }
-
         private void FindMaximalSequences()
         {
             //checking from the longest sequences
@@ -670,6 +572,90 @@ namespace DM_DAT
             return false;
         }
 
+        /*****************************************************************************************************/
+        /*****************************************************************************************************/
+        /*****                                                                                          ******/
+        /*****                             INPUT/OUTPUT/EVENTS/VALIDATION                               ******/
+        /*****                                                                                          ******/
+        /*****************************************************************************************************/
+        /*****************************************************************************************************/
+
+
+        public bool ReadData()
+        {
+            int counter = 0;
+            string line;
+
+            // Read the file and display it line by line.
+
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog()
+            {
+                Filter = "DAT Files(*.dat)|*.dat"
+            };
+            dlg.Title = "Open file with sequences";
+
+            Nullable<bool> result = dlg.ShowDialog();
+
+            if (result == true)
+            {
+                System.IO.StreamReader file =
+               new System.IO.StreamReader(dlg.FileName);
+                while ((line = file.ReadLine()) != null)
+                {
+                    List<List<int>> customerTransactions = new List<List<int>>();
+                    //    Console.WriteLine(line);
+                    string[] customerTransactionsTMP = line.Split(' ');
+                    foreach (string trans in customerTransactionsTMP)
+                    {
+                        List<int> itemsSequence = new List<int>();
+                        foreach (char a in trans)
+                        {
+                            itemsSequence.Add(int.Parse(a.ToString()));
+                            numberOfCells++;
+                        }
+                        customerTransactions.Add(itemsSequence);
+                    }
+                    customersSequences.Add(customerTransactions);
+                    counter++;
+                }
+                numberOfCustomersSupport = (int)((double)counter * supportPercentage);
+                Console.WriteLine("Number of customers: " + counter);
+                file.Close();
+                MessageBox.Show("Word Set Loaded!");
+
+                //////////////
+
+                Microsoft.Win32.SaveFileDialog saveDlg = new Microsoft.Win32.SaveFileDialog()
+                {
+                    Filter = "Text Files(*.txt)|*.txt"
+                };
+
+                Nullable<bool> saveResult = saveDlg.ShowDialog();
+
+                if (saveResult == true)
+                {
+                    saveFilePath = saveDlg.FileName;
+
+                    MessageBox.Show("Found sequences will be written to a given file");
+
+                    return true;
+
+                }
+                else
+                {
+                    MessageBox.Show("You need to select/create file to which results will be written!");
+                    return false;
+                }
+                /////////////////
+            }
+            else
+            {
+                MessageBox.Show("Loading Aborted!");
+                return false;
+            }
+
+        }
+
         private bool validateInput()
         {
             try{
@@ -732,6 +718,51 @@ namespace DM_DAT
             }
             numberOfSequenceCandidates = new List<int>();
             MessageBox.Show("Words Created and file saved!");
+        }
+
+        private async void Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (validateInput())
+            {
+
+                customersSequences = new List<List<List<int>>>();
+                frequentItemListsOfDifferentLength = new List<List<List<int>>>();
+                frequentItemsetList = new List<List<int>>();
+                largeSequences = new List<List<List<int>>>();
+                numberOfCells = 0;
+                if (ReadData())
+                {
+
+                    var watch = Stopwatch.StartNew();
+                    GenerateFrequentItemsets();
+
+                    Transform();
+
+                    largeSequences.Add(new List<List<int>>());
+                    for (int i = 0; i < frequentItemsetList.Count; i++)
+                    {
+                        List<int> lengthOneSequence = new List<int>();
+                        lengthOneSequence.Add(i);
+                        largeSequences[0].Add(lengthOneSequence);
+                    }
+                    numberOfSequenceCandidates.Add(largeSequences[0].Count);
+
+                    progressRing.Visibility = Visibility.Visible;
+                    progressRingBackground.Visibility = Visibility.Visible;
+
+                    await GenerateFrequentSequences();
+
+                    progressRingBackground.Visibility = Visibility.Collapsed;
+                    progressRing.Visibility = Visibility.Collapsed;
+
+
+                    FindMaximalSequences();
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+
+                    SaveToFile((int)elapsedMs);
+                }
+            }
         }
     }
 }
